@@ -1,26 +1,197 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ═══════════════════════════════════════════════════════════════
+   AI AGENT — Design System Theme
+   Inspired by Claude / ChatGPT — Clean, modern, sophisticated
+   ═══════════════════════════════════════════════════════════════ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* ── Core palette ── */
+  --ai-white: #ffffff;
+  --ai-snow: #f9fafb;
+  --ai-cloud: #f3f4f6;
+  --ai-mist: #e5e7eb;
+  --ai-silver: #d1d5db;
+  --ai-slate: #9ca3af;
+  --ai-graphite: #6b7280;
+  --ai-charcoal: #374151;
+  --ai-ink: #1f2937;
+  --ai-void: #111827;
+
+  /* ── Brand / AI accent ── */
+  --ai-primary: #6366f1;
+  --ai-primary-hover: #4f46e5;
+  --ai-primary-light: #e0e7ff;
+  --ai-primary-soft: #eef2ff;
+
+  /* ── Gradient stops ── */
+  --ai-gradient-from: #6366f1;
+  --ai-gradient-via: #8b5cf6;
+  --ai-gradient-to: #a78bfa;
+
+  /* ── Semantic ── */
+  --ai-success: #10b981;
+  --ai-success-light: #d1fae5;
+  --ai-warning: #f59e0b;
+  --ai-warning-light: #fef3c7;
+  --ai-error: #ef4444;
+  --ai-error-light: #fee2e2;
+  --ai-info: #3b82f6;
+  --ai-info-light: #dbeafe;
+
+  /* ── Surfaces ── */
+  --background: #ffffff;
+  --foreground: #1f2937;
+  --surface: #ffffff;
+  --surface-secondary: #f9fafb;
+  --surface-tertiary: #f3f4f6;
+  --border-color: #e5e7eb;
+  --border-hover: #d1d5db;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-glow-lg: 0 0 40px rgba(99, 102, 241, 0.2);
+
+  /* ── Radii ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0a0a0f;
+    --foreground: #f3f4f6;
+    --surface: #141420;
+    --surface-secondary: #1a1a2e;
+    --surface-tertiary: #222240;
+    --border-color: #2a2a4a;
+    --border-hover: #3a3a5c;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.25);
+    --shadow-glow-lg: 0 0 40px rgba(99, 102, 241, 0.35);
   }
 }
 
+/* ── Tailwind v4 theme tokens ── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-border: var(--border-color);
+  --color-border-hover: var(--border-hover);
+
+  --color-ai-primary: var(--ai-primary);
+  --color-ai-primary-hover: var(--ai-primary-hover);
+  --color-ai-primary-light: var(--ai-primary-light);
+  --color-ai-primary-soft: var(--ai-primary-soft);
+  --color-ai-success: var(--ai-success);
+  --color-ai-success-light: var(--ai-success-light);
+  --color-ai-warning: var(--ai-warning);
+  --color-ai-warning-light: var(--ai-warning-light);
+  --color-ai-error: var(--ai-error);
+  --color-ai-error-light: var(--ai-error-light);
+  --color-ai-info: var(--ai-info);
+  --color-ai-info-light: var(--ai-info-light);
+
+  --color-ai-white: var(--ai-white);
+  --color-ai-snow: var(--ai-snow);
+  --color-ai-cloud: var(--ai-cloud);
+  --color-ai-mist: var(--ai-mist);
+  --color-ai-silver: var(--ai-silver);
+  --color-ai-slate: var(--ai-slate);
+  --color-ai-graphite: var(--ai-graphite);
+  --color-ai-charcoal: var(--ai-charcoal);
+  --color-ai-ink: var(--ai-ink);
+  --color-ai-void: var(--ai-void);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ── Base styles ── */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Animations ── */
+@keyframes ai-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ai-pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes ai-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ai-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ai-bounce-dot {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+@keyframes ai-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ai-silver);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ai-slate);
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--ai-primary-light);
+  color: var(--ai-primary-hover);
+}
+
+/* ── Focus visible ring (accessibility) ── */
+.ai-focus-ring:focus-visible {
+  outline: 2px solid var(--ai-primary);
+  outline-offset: 2px;
 }
