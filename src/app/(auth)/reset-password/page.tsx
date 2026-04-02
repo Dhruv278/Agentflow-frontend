@@ -1,0 +1,157 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { Button, PasswordInput } from "@/components/ui";
+import { AuthLayoutShell, FormMessageBanner } from "@/components/features/auth";
+import { useFormState } from "@/hooks/use-form-state";
+import { validatePassword, validateConfirmPassword } from "@/lib/utils/validation";
+
+/* ── Icons ── */
+function ShieldCheckIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-ai-success">
+      <path fillRule="evenodd" d="M12.516 2.17a.75.75 0 0 0-1.032 0 11.209 11.209 0 0 1-7.877 3.08.75.75 0 0 0-.722.515A12.74 12.74 0 0 0 2.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 0 0 .374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 0 0-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08Zm3.094 8.016a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+/* ── Page ── */
+export default function ResetPasswordPage() {
+  const form = useFormState({
+    initialValues: { password: "", confirmPassword: "" },
+    validate: (values) => {
+      const errors: Partial<Record<keyof typeof values, string>> = {};
+      const passResult = validatePassword(values.password);
+      if (!passResult.valid) errors.password = passResult.error;
+      const confirmResult = validateConfirmPassword(values.password, values.confirmPassword);
+      if (!confirmResult.valid) errors.confirmPassword = confirmResult.error;
+      return errors;
+    },
+    onSubmit: async (values) => {
+      // TODO: Replace with actual API call — POST /auth/reset-password
+      // In production, extract the reset token from URL search params:
+      //   const token = new URLSearchParams(window.location.search).get("token");
+      //   await api.post("/auth/reset-password", { token, password: values.password });
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("Reset password:", { password: values.password });
+      form.setMessage({ type: "success", text: "Password reset successfully!" });
+    },
+  });
+
+  const isSuccess = form.message?.type === "success";
+
+  return (
+    <AuthLayoutShell
+      title="Set new password"
+      subtitle="Create a strong password for your account"
+      footer={
+        !isSuccess ? (
+          <p>
+            Remember your password?{" "}
+            <Link
+              href="/login"
+              className="font-semibold text-ai-primary hover:text-ai-primary-hover transition-colors"
+            >
+              Sign in
+            </Link>
+          </p>
+        ) : undefined
+      }
+    >
+      {/* Form message */}
+      {form.message && <FormMessageBanner type={form.message.type} text={form.message.text} />}
+
+      {isSuccess ? (
+        /* Success state */
+        <div className="mt-6 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-ai-success-light dark:bg-emerald-500/10 flex items-center justify-center">
+            <ShieldCheckIcon />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-ai-ink dark:text-white">
+              Password updated!
+            </h3>
+            <p className="mt-2 text-sm text-ai-graphite dark:text-ai-slate max-w-xs mx-auto">
+              Your password has been reset successfully. You can now sign in with your new password.
+            </p>
+          </div>
+          <Link href="/login">
+            <Button variant="gradient" size="xl" fullWidth>
+              Sign In to Your Account
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        /* Form state */
+        <form onSubmit={form.handleSubmit} noValidate className="space-y-4 mt-2">
+          {/* Password requirements hint */}
+          <div className="p-3 rounded-xl bg-surface-secondary border border-border">
+            <p className="text-xs font-medium text-ai-charcoal dark:text-ai-cloud mb-2">
+              Password requirements:
+            </p>
+            <ul className="space-y-1">
+              {[
+                { rule: "At least 8 characters", met: form.values.password.length >= 8 },
+                { rule: "One uppercase letter", met: /[A-Z]/.test(form.values.password) },
+                { rule: "One lowercase letter", met: /[a-z]/.test(form.values.password) },
+                { rule: "One number", met: /\d/.test(form.values.password) },
+              ].map((req) => (
+                <li key={req.rule} className="flex items-center gap-2 text-xs">
+                  {req.met ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-ai-success">
+                      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <span className="w-3.5 h-3.5 rounded-full border border-ai-silver flex items-center justify-center">
+                      <span className="w-1 h-1 rounded-full bg-ai-silver" />
+                    </span>
+                  )}
+                  <span className={req.met ? "text-ai-charcoal dark:text-ai-cloud" : "text-ai-slate"}>
+                    {req.rule}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <PasswordInput
+            label="New password"
+            placeholder="Create a strong password"
+            autoComplete="new-password"
+            inputSize="lg"
+            showStrength
+            value={form.values.password}
+            onChange={(e) => form.setField("password", e.target.value)}
+            onBlur={() => form.handleBlur("password")}
+            error={form.touched.password ? form.errors.password : undefined}
+            disabled={form.isLoading}
+          />
+
+          <PasswordInput
+            label="Confirm new password"
+            placeholder="Re-enter your new password"
+            autoComplete="new-password"
+            inputSize="lg"
+            value={form.values.confirmPassword}
+            onChange={(e) => form.setField("confirmPassword", e.target.value)}
+            onBlur={() => form.handleBlur("confirmPassword")}
+            error={form.touched.confirmPassword ? form.errors.confirmPassword : undefined}
+            disabled={form.isLoading}
+          />
+
+          <Button
+            type="submit"
+            variant="gradient"
+            size="xl"
+            fullWidth
+            isLoading={form.isLoading}
+            className="mt-2"
+          >
+            Reset Password
+          </Button>
+        </form>
+      )}
+    </AuthLayoutShell>
+  );
+}

@@ -38,3 +38,6 @@ export type { SelectProps, SelectOption } from "./select";
 
 export { Tooltip } from "./tooltip";
 export type { TooltipProps } from "./tooltip";
+
+export { PasswordInput } from "./password-input";
+export type { PasswordInputProps } from "./password-input";
