@@ -2,15 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Input, PasswordInput } from "@/components/ui";
 import {
   AuthLayoutShell,
   FormMessageBanner,
-  OAuthDivider,
-  SocialLoginButtons,
 } from "@/components/features/auth";
 import { useFormState } from "@/hooks/use-form-state";
-import { validateEmail, validatePassword } from "@/lib/utils/validation";
+import { validateEmail } from "@/lib/utils/validation";
+import { apiLogin } from "@/lib/api/auth";
+import type { AxiosError } from "axios";
 
 /* ── Icons ── */
 function MailIcon() {
@@ -24,24 +25,43 @@ function MailIcon() {
 
 /* ── Page ── */
 export default function LoginPage() {
+  const router = useRouter();
+
   const form = useFormState({
     initialValues: { email: "", password: "" },
     validate: (values) => {
       const errors: Partial<Record<keyof typeof values, string>> = {};
       const emailResult = validateEmail(values.email);
       if (!emailResult.valid) errors.email = emailResult.error;
-      const passResult = validatePassword(values.password);
-      if (!passResult.valid) errors.password = passResult.error;
+      if (!values.password) errors.password = "Password is required";
       return errors;
     },
     onSubmit: async (values) => {
-      // TODO: Replace with actual API call — POST /auth/login
-      // Simulate network delay for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Login:", values);
-      form.setMessage({ type: "success", text: "Login successful! Redirecting…" });
+      try {
+        await apiLogin(values.email, values.password);
+        form.setMessage({ type: "success", text: "Login successful! Redirecting…" });
+        router.push("/dashboard");
+      } catch (err) {
+        const axiosErr = err as AxiosError<{ message: string }>;
+        const msg = axiosErr.response?.data?.message ?? "Login failed. Please try again.";
+        const message = Array.isArray(msg) ? msg[0] : msg;
+
+        if (typeof message === "string" && message.toLowerCase().includes("verify your email")) {
+          form.setMessage({
+            type: "error",
+            text: "Your email is not verified yet. Please check your inbox for the verification link.",
+          });
+          return;
+        }
+
+        throw new Error(message);
+      }
     },
   });
+
+  const isUnverifiedError =
+    form.message?.type === "error" &&
+    form.message.text.includes("not verified");
 
   return (
     <AuthLayoutShell
@@ -59,15 +79,20 @@ export default function LoginPage() {
         </p>
       }
     >
-      {/* Form message */}
       {form.message && <FormMessageBanner type={form.message.type} text={form.message.text} />}
 
-      {/* Social login */}
-      <SocialLoginButtons />
-      <OAuthDivider />
+      {isUnverifiedError && form.values.email && (
+        <div className="mt-2 text-center">
+          <Link
+            href={`/verify-email?email=${encodeURIComponent(form.values.email)}`}
+            className="text-sm font-medium text-ai-primary hover:text-ai-primary-hover transition-colors"
+          >
+            Resend verification email
+          </Link>
+        </div>
+      )}
 
-      {/* Login form */}
-      <form onSubmit={form.handleSubmit} noValidate className="space-y-4">
+      <form onSubmit={form.handleSubmit} noValidate className="space-y-4 mt-4">
         <Input
           label="Email address"
           type="email"
@@ -116,7 +141,6 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      {/* Terms */}
       <p className="mt-6 text-center text-[11px] text-ai-slate leading-relaxed">
         By signing in, you agree to our{" "}
         <Link href="#" className="underline hover:text-ai-charcoal dark:hover:text-ai-cloud">

@@ -6,6 +6,8 @@ import { Button, Input } from "@/components/ui";
 import { AuthLayoutShell, FormMessageBanner } from "@/components/features/auth";
 import { useFormState } from "@/hooks/use-form-state";
 import { validateEmail } from "@/lib/utils/validation";
+import { apiForgotPassword } from "@/lib/api/auth";
+import type { AxiosError } from "axios";
 
 /* ── Icons ── */
 function MailIcon() {
@@ -36,13 +38,14 @@ export default function ForgotPasswordPage() {
       return errors;
     },
     onSubmit: async (values) => {
-      // TODO: Replace with actual API call — POST /auth/forgot-password
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Forgot password:", values);
-      form.setMessage({
-        type: "success",
-        text: `If an account exists for ${values.email}, we've sent a password reset link. Check your inbox.`,
-      });
+      try {
+        const msg = await apiForgotPassword(values.email);
+        form.setMessage({ type: "success", text: msg });
+      } catch (err) {
+        const axiosErr = err as AxiosError<{ message: string }>;
+        const message = axiosErr.response?.data?.message ?? "Something went wrong. Please try again.";
+        throw new Error(Array.isArray(message) ? message[0] : message);
+      }
     },
   });
 

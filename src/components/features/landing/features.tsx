@@ -107,7 +107,7 @@ export function Features() {
               {/* Icon */}
               <div className={`w-12 h-12 rounded-xl ${feature.bg} flex items-center justify-center mb-5`}>
                 <span className={`bg-gradient-to-br ${feature.gradient} bg-clip-text text-transparent`}>
-                  {React.cloneElement(feature.icon as React.ReactElement, {
+                  {React.cloneElement(feature.icon as React.ReactElement<Record<string, unknown>>, {
                     className: "w-6 h-6",
                     style: { fill: "url(#feat-grad-" + i + ")" },
                   })}

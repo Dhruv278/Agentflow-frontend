@@ -2,20 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { Button, Input, PasswordInput } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { Button, Input } from "@/components/ui";
 import {
   AuthLayoutShell,
   FormMessageBanner,
-  OAuthDivider,
-  SocialLoginButtons,
 } from "@/components/features/auth";
 import { useFormState } from "@/hooks/use-form-state";
-import {
-  validateEmail,
-  validatePassword,
-  validateConfirmPassword,
-  validateName,
-} from "@/lib/utils/validation";
+import { validateEmail, validateName } from "@/lib/utils/validation";
+import { apiRegister } from "@/lib/api/auth";
+import type { AxiosError } from "axios";
 
 /* ── Icons ── */
 function UserIcon() {
@@ -37,12 +33,12 @@ function MailIcon() {
 
 /* ── Page ── */
 export default function RegisterPage() {
+  const router = useRouter();
+
   const form = useFormState({
     initialValues: {
       name: "",
       email: "",
-      password: "",
-      confirmPassword: "",
     },
     validate: (values) => {
       const errors: Partial<Record<keyof typeof values, string>> = {};
@@ -50,22 +46,17 @@ export default function RegisterPage() {
       if (!nameResult.valid) errors.name = nameResult.error;
       const emailResult = validateEmail(values.email);
       if (!emailResult.valid) errors.email = emailResult.error;
-      const passResult = validatePassword(values.password);
-      if (!passResult.valid) errors.password = passResult.error;
-      const confirmResult = validateConfirmPassword(values.password, values.confirmPassword);
-      if (!confirmResult.valid) errors.confirmPassword = confirmResult.error;
       return errors;
     },
     onSubmit: async (values) => {
-      // TODO: Replace with actual API call — POST /auth/register
-      // Payload: { name, email, password } (confirmPassword is client-side only)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Register:", {
-        name: values.name,
-        email: values.email,
-        password: values.password,
-      });
-      form.setMessage({ type: "success", text: "Account created! Redirecting to dashboard…" });
+      try {
+        await apiRegister(values.name, values.email);
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+      } catch (err) {
+        const axiosErr = err as AxiosError<{ message: string }>;
+        const message = axiosErr.response?.data?.message ?? "Registration failed. Please try again.";
+        throw new Error(Array.isArray(message) ? message[0] : message);
+      }
     },
   });
 
@@ -85,14 +76,8 @@ export default function RegisterPage() {
         </p>
       }
     >
-      {/* Form message */}
       {form.message && <FormMessageBanner type={form.message.type} text={form.message.text} />}
 
-      {/* Social login */}
-      <SocialLoginButtons />
-      <OAuthDivider />
-
-      {/* Register form */}
       <form onSubmit={form.handleSubmit} noValidate className="space-y-4">
         <Input
           label="Full name"
@@ -122,31 +107,6 @@ export default function RegisterPage() {
           disabled={form.isLoading}
         />
 
-        <PasswordInput
-          label="Password"
-          placeholder="Create a strong password"
-          autoComplete="new-password"
-          inputSize="lg"
-          showStrength
-          value={form.values.password}
-          onChange={(e) => form.setField("password", e.target.value)}
-          onBlur={() => form.handleBlur("password")}
-          error={form.touched.password ? form.errors.password : undefined}
-          disabled={form.isLoading}
-        />
-
-        <PasswordInput
-          label="Confirm password"
-          placeholder="Re-enter your password"
-          autoComplete="new-password"
-          inputSize="lg"
-          value={form.values.confirmPassword}
-          onChange={(e) => form.setField("confirmPassword", e.target.value)}
-          onBlur={() => form.handleBlur("confirmPassword")}
-          error={form.touched.confirmPassword ? form.errors.confirmPassword : undefined}
-          disabled={form.isLoading}
-        />
-
         <Button
           type="submit"
           variant="gradient"
@@ -155,11 +115,10 @@ export default function RegisterPage() {
           isLoading={form.isLoading}
           className="mt-2"
         >
-          Create Account
+          Continue with Email
         </Button>
       </form>
 
-      {/* Terms */}
       <p className="mt-6 text-center text-[11px] text-ai-slate leading-relaxed">
         By creating an account, you agree to our{" "}
         <Link href="#" className="underline hover:text-ai-charcoal dark:hover:text-ai-cloud">

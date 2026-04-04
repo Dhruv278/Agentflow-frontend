@@ -7,7 +7,7 @@ import { Button, PasswordInput } from "@/components/ui";
 import { AuthLayoutShell, FormMessageBanner } from "@/components/features/auth";
 import { useFormState } from "@/hooks/use-form-state";
 import { validatePassword, validateConfirmPassword } from "@/lib/utils/validation";
-import { apiResetPassword } from "@/lib/api/auth";
+import { apiSetPassword } from "@/lib/api/auth";
 import type { AxiosError } from "axios";
 
 function ShieldCheckIcon() {
@@ -18,7 +18,7 @@ function ShieldCheckIcon() {
   );
 }
 
-export default function ResetPasswordPage() {
+export default function SetPasswordPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -35,11 +35,11 @@ export default function ResetPasswordPage() {
     onSubmit: async (values) => {
       if (!token) return;
       try {
-        const msg = await apiResetPassword(token, values.password);
-        form.setMessage({ type: "success", text: msg });
+        await apiSetPassword(token, values.password);
+        form.setMessage({ type: "success", text: "Account verified and password set!" });
       } catch (err) {
         const axiosErr = err as AxiosError<{ message: string }>;
-        const message = axiosErr.response?.data?.message ?? "Failed to reset password. The link may have expired.";
+        const message = axiosErr.response?.data?.message ?? "Failed to set password. The link may have expired.";
         throw new Error(Array.isArray(message) ? message[0] : message);
       }
     },
@@ -51,15 +51,15 @@ export default function ResetPasswordPage() {
     return (
       <AuthLayoutShell
         title="Invalid link"
-        subtitle="This password reset link is missing or malformed"
+        subtitle="This verification link is missing or malformed"
       >
         <div className="text-center space-y-6 mt-4">
           <p className="text-sm text-ai-graphite dark:text-ai-slate">
-            The link you followed appears to be invalid. Please request a new password reset.
+            The link you followed appears to be invalid. Please register again to receive a new verification email.
           </p>
-          <Link href="/forgot-password">
+          <Link href="/register">
             <Button variant="gradient" size="xl" fullWidth>
-              Request New Reset Link
+              Go to Registration
             </Button>
           </Link>
         </div>
@@ -69,12 +69,12 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthLayoutShell
-      title="Set new password"
-      subtitle="Create a strong password for your account"
+      title="Set your password"
+      subtitle="Create a strong password to activate your account"
       footer={
         !isSuccess ? (
           <p>
-            Remember your password?{" "}
+            Already have an account?{" "}
             <Link
               href="/login"
               className="font-semibold text-ai-primary hover:text-ai-primary-hover transition-colors"
@@ -94,10 +94,10 @@ export default function ResetPasswordPage() {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-ai-ink dark:text-white">
-              Password updated!
+              Account activated!
             </h3>
             <p className="mt-2 text-sm text-ai-graphite dark:text-ai-slate max-w-xs mx-auto">
-              Your password has been reset successfully. You can now sign in with your new password.
+              Your email has been verified and your password is set. You can now sign in.
             </p>
           </div>
           <Link href="/login">
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <PasswordInput
-            label="New password"
+            label="Password"
             placeholder="Create a strong password"
             autoComplete="new-password"
             inputSize="lg"
@@ -151,8 +151,8 @@ export default function ResetPasswordPage() {
           />
 
           <PasswordInput
-            label="Confirm new password"
-            placeholder="Re-enter your new password"
+            label="Confirm password"
+            placeholder="Re-enter your password"
             autoComplete="new-password"
             inputSize="lg"
             value={form.values.confirmPassword}
@@ -170,7 +170,7 @@ export default function ResetPasswordPage() {
             isLoading={form.isLoading}
             className="mt-2"
           >
-            Reset Password
+            Set Password & Activate
           </Button>
         </form>
       )}
