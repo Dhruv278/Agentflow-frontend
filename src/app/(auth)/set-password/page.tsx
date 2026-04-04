@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button, PasswordInput } from "@/components/ui";
@@ -19,6 +19,14 @@ function ShieldCheckIcon() {
 }
 
 export default function SetPasswordPage() {
+  return (
+    <Suspense>
+      <SetPasswordContent />
+    </Suspense>
+  );
+}
+
+function SetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 

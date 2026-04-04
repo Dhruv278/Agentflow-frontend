@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardTitle, Badge, Button } from "@/components/ui";
@@ -80,6 +80,14 @@ function SuccessBanner({ onDismiss }: { onDismiss: () => void }) {
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [showUpgraded, setShowUpgraded] = useState(false);
