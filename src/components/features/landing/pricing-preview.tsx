@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import { PLANS as PLAN_DATA } from "@/lib/utils/plans";
 
 /* ── Check icon ── */
 function CheckIcon({ className }: { className?: string }) {
@@ -24,71 +25,22 @@ function SparkleIcon({ className }: { className?: string }) {
 
 type PlanKey = "free" | "pro" | "byok";
 
-interface PlanData {
-  key: PlanKey;
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  features: string[];
-  cta: string;
-  ctaVariant: "secondary" | "gradient" | "outline";
-  badge?: string;
-}
+const CTA_CONFIG: Record<string, { cta: string; ctaVariant: "secondary" | "gradient" | "outline" }> = {
+  FREE: { cta: "Start Free", ctaVariant: "secondary" },
+  PRO: { cta: "Upgrade to Pro", ctaVariant: "gradient" },
+  BYOK: { cta: "Get BYOK", ctaVariant: "outline" },
+};
 
-const PLANS: PlanData[] = [
-  {
-    key: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Get started with AI agent teams at no cost.",
-    features: [
-      "1 agent team",
-      "10 runs / month",
-      "Mistral 7B model",
-      "Basic agent memory",
-      "Community support",
-    ],
-    cta: "Start Free",
-    ctaVariant: "secondary",
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    price: "$19",
-    period: "/month",
-    description: "For power users who need more agents and models.",
-    features: [
-      "10 agent teams",
-      "500 runs / month",
-      "All LLM models (GPT-4, Claude, etc.)",
-      "Advanced semantic memory",
-      "Priority support",
-      "BYOK optional",
-    ],
-    cta: "Upgrade to Pro",
-    ctaVariant: "gradient",
-    badge: "Most Popular",
-  },
-  {
-    key: "byok",
-    name: "BYOK",
-    price: "$9",
-    period: "/month",
-    description: "Bring your own OpenRouter key for unlimited runs.",
-    features: [
-      "Unlimited agent teams",
-      "Unlimited runs",
-      "All LLM models",
-      "Advanced semantic memory",
-      "Priority support",
-      "AES-256 encrypted key storage",
-    ],
-    cta: "Get BYOK",
-    ctaVariant: "outline",
-  },
-];
+const PLANS = PLAN_DATA.map((p) => ({
+  key: p.key.toLowerCase() as PlanKey,
+  name: p.name,
+  price: p.price,
+  period: p.period,
+  description: p.description,
+  features: p.features.map((f) => f.text),
+  badge: p.badge,
+  ...CTA_CONFIG[p.key],
+}));
 
 /* ── Single pricing card ── */
 function PricingCard({
@@ -97,7 +49,7 @@ function PricingCard({
   onSelect,
   index,
 }: {
-  plan: PlanData;
+  plan: (typeof PLANS)[number];
   isSelected: boolean;
   onSelect: () => void;
   index: number;
