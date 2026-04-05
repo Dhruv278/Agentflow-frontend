@@ -31,6 +31,5 @@ export async function apiGetAgentRun(id: string): Promise<AgentRun> {
 }
 
 export function getAgentRunStreamUrl(runId: string): string {
-  const baseUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
-  return `${baseUrl}/agent-runs/${runId}/stream`;
+  return `/api/backend/agent-runs/${runId}/stream`;
 }
