@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { getAgentRunStreamUrl } from "@/lib/api/agent-runs";
+import { getAgentRunStreamUrl, apiGetAgentRun } from "@/lib/api/agent-runs";
 import type {
   SSEStepStart,
   SSEToken,
@@ -39,22 +39,42 @@ const INITIAL_STATE: StreamState = {
   totalDurationMs: 0,
 };
 
+const MAX_RETRIES = 5;
+
 export function useAgentRunStream() {
   const [state, setState] = useState<StreamState>(INITIAL_STATE);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const isTerminalRef = useRef(false);
+  const isUserDisconnectRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runIdRef = useRef<string | null>(null);
 
-  const disconnect = useCallback(() => {
+  const clearRetryTimer = useCallback(() => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
+  const closeEventSource = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    setState((s) => ({ ...s, isConnected: false }));
   }, []);
 
-  const connect = useCallback(
+  const disconnect = useCallback(() => {
+    isUserDisconnectRef.current = true;
+    clearRetryTimer();
+    closeEventSource();
+    setState((s) => ({ ...s, isConnected: false }));
+  }, [clearRetryTimer, closeEventSource]);
+
+  const openStream = useCallback(
     (runId: string) => {
-      disconnect();
-      setState({ ...INITIAL_STATE, isConnected: true });
+      closeEventSource();
+      setState((s) => ({ ...s, isConnected: true }));
 
       const url = getAgentRunStreamUrl(runId);
       const es = new EventSource(url, { withCredentials: true });
@@ -110,6 +130,7 @@ export function useAgentRunStream() {
 
       es.addEventListener("run_complete", (e) => {
         const data: SSERunComplete = JSON.parse(e.data);
+        isTerminalRef.current = true;
         setState((s) => ({
           ...s,
           isConnected: false,
@@ -123,6 +144,7 @@ export function useAgentRunStream() {
 
       es.addEventListener("run_error", (e) => {
         const data: SSERunError = JSON.parse(e.data);
+        isTerminalRef.current = true;
         setState((s) => ({
           ...s,
           isConnected: false,
@@ -134,25 +156,120 @@ export function useAgentRunStream() {
       });
 
       es.onerror = () => {
-        setState((s) => ({
-          ...s,
-          isConnected: false,
-          error: s.error ?? "Connection lost. Reload to see results.",
-        }));
         es.close();
         eventSourceRef.current = null;
+        setState((s) => ({ ...s, isConnected: false }));
+
+        if (isTerminalRef.current || isUserDisconnectRef.current) return;
+
+        const attempt = retryCountRef.current;
+        if (attempt >= MAX_RETRIES) {
+          setState((s) => ({
+            ...s,
+            error: s.error ?? "Connection lost after multiple retries.",
+          }));
+          return;
+        }
+
+        const delay = Math.min(1000 * Math.pow(2, attempt), 16000);
+        retryCountRef.current = attempt + 1;
+        retryTimerRef.current = setTimeout(() => reconnect(runId), delay);
       };
     },
-    [disconnect],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [closeEventSource],
+  );
+
+  const reconnect = useCallback(
+    async (runId: string) => {
+      try {
+        const run = await apiGetAgentRun(runId);
+
+        if (run.status === "COMPLETED" || run.status === "FAILED") {
+          isTerminalRef.current = true;
+          setState({
+            isConnected: false,
+            isComplete: true,
+            error: run.errorMessage ?? null,
+            steps: run.steps.map((s) => ({
+              id: s.id,
+              role: s.role,
+              agentId: "",
+              output: s.output ?? "",
+              tokenCount: s.tokenCount,
+              durationMs: s.durationMs,
+              status: s.status,
+            })),
+            totalTokens: run.totalTokensUsed,
+            totalDurationMs: 0,
+          });
+          return;
+        }
+
+        // Run still active — hydrate completed steps, then reopen SSE
+        setState((prev) => {
+          const existingIds = new Set(prev.steps.map((s) => s.id));
+          const newSteps = run.steps
+            .filter((s) => !existingIds.has(s.id))
+            .map((s) => ({
+              id: s.id,
+              role: s.role,
+              agentId: "",
+              output: s.output ?? "",
+              tokenCount: s.tokenCount,
+              durationMs: s.durationMs,
+              status: s.status,
+            }));
+          return {
+            ...prev,
+            steps: [
+              ...prev.steps.filter((s) => s.status === "COMPLETED"),
+              ...newSteps,
+            ],
+          };
+        });
+
+        openStream(runId);
+        retryCountRef.current = 0;
+      } catch {
+        const attempt = retryCountRef.current;
+        if (attempt >= MAX_RETRIES) {
+          setState((s) => ({
+            ...s,
+            error: s.error ?? "Connection lost after multiple retries.",
+          }));
+          return;
+        }
+        const delay = Math.min(1000 * Math.pow(2, attempt), 16000);
+        retryCountRef.current = attempt + 1;
+        retryTimerRef.current = setTimeout(() => reconnect(runId), delay);
+      }
+    },
+    [openStream],
+  );
+
+  const connect = useCallback(
+    (runId: string) => {
+      disconnect();
+
+      // Reset refs for new run
+      isTerminalRef.current = false;
+      isUserDisconnectRef.current = false;
+      retryCountRef.current = 0;
+      runIdRef.current = runId;
+
+      setState({ ...INITIAL_STATE, isConnected: true });
+      openStream(runId);
+    },
+    [disconnect, openStream],
   );
 
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      closeEventSource();
+      clearRetryTimer();
     };
-  }, []);
+  }, [closeEventSource, clearRetryTimer]);
 
   return { ...state, connect, disconnect };
 }
