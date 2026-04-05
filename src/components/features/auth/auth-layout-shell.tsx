@@ -90,11 +90,11 @@ export function AuthLayoutShell({ title, subtitle, children, footer }: AuthLayou
             </blockquote>
             <div className="mt-6 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold text-white">
-                AK
+                DG
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Alex Kim</p>
-                <p className="text-sm text-white/60">CTO, TechForward</p>
+                <p className="text-sm font-semibold text-white">Dhruv Gopani</p>
+                <p className="text-sm text-white/60">CTO</p>
               </div>
             </div>
           </div>
