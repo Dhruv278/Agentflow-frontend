@@ -28,6 +28,7 @@ export interface StreamState {
   steps: StreamStep[];
   totalTokens: number;
   totalDurationMs: number;
+  isStale: boolean;
 }
 
 const INITIAL_STATE: StreamState = {
@@ -37,9 +38,11 @@ const INITIAL_STATE: StreamState = {
   steps: [],
   totalTokens: 0,
   totalDurationMs: 0,
+  isStale: false,
 };
 
 const MAX_RETRIES = 5;
+const INACTIVITY_TIMEOUT_MS = 60_000;
 
 export function useAgentRunStream() {
   const [state, setState] = useState<StreamState>(INITIAL_STATE);
@@ -49,11 +52,19 @@ export function useAgentRunStream() {
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runIdRef = useRef<string | null>(null);
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearRetryTimer = useCallback(() => {
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
+    }
+  }, []);
+
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
   }, []);
 
@@ -67,42 +78,59 @@ export function useAgentRunStream() {
   const disconnect = useCallback(() => {
     isUserDisconnectRef.current = true;
     clearRetryTimer();
+    clearInactivityTimer();
     closeEventSource();
     setState((s) => ({ ...s, isConnected: false }));
-  }, [clearRetryTimer, closeEventSource]);
+  }, [clearRetryTimer, clearInactivityTimer, closeEventSource]);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimer();
+    inactivityTimerRef.current = setTimeout(() => {
+      setState((s) => (s.isConnected ? { ...s, isStale: true } : s));
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [clearInactivityTimer]);
 
   const openStream = useCallback(
     (runId: string) => {
       closeEventSource();
-      setState((s) => ({ ...s, isConnected: true }));
+      setState((s) => ({ ...s, isConnected: true, isStale: false }));
 
       const url = getAgentRunStreamUrl(runId);
       const es = new EventSource(url, { withCredentials: true });
       eventSourceRef.current = es;
 
+      resetInactivityTimer();
+
       es.addEventListener("step_start", (e) => {
+        resetInactivityTimer();
         const data: SSEStepStart = JSON.parse(e.data);
-        setState((s) => ({
-          ...s,
-          steps: [
-            ...s.steps,
-            {
-              id: data.stepId,
-              role: data.role,
-              agentId: data.agentId,
-              output: "",
-              tokenCount: 0,
-              durationMs: 0,
-              status: "RUNNING",
-            },
-          ],
-        }));
+        setState((s) => {
+          if (s.steps.some((step) => step.id === data.stepId)) return s;
+          return {
+            ...s,
+            isStale: false,
+            steps: [
+              ...s.steps,
+              {
+                id: data.stepId,
+                role: data.role,
+                agentId: data.agentId,
+                output: "",
+                tokenCount: 0,
+                durationMs: 0,
+                status: "RUNNING",
+              },
+            ],
+          };
+        });
       });
 
       es.addEventListener("token", (e) => {
+        resetInactivityTimer();
         const data: SSEToken = JSON.parse(e.data);
         setState((s) => ({
           ...s,
+          isStale: false,
           steps: s.steps.map((step) =>
             step.id === data.stepId
               ? { ...step, output: step.output + data.token }
@@ -112,9 +140,11 @@ export function useAgentRunStream() {
       });
 
       es.addEventListener("step_complete", (e) => {
+        resetInactivityTimer();
         const data: SSEStepComplete = JSON.parse(e.data);
         setState((s) => ({
           ...s,
+          isStale: false,
           steps: s.steps.map((step) =>
             step.id === data.stepId
               ? {
@@ -129,12 +159,14 @@ export function useAgentRunStream() {
       });
 
       es.addEventListener("run_complete", (e) => {
+        clearInactivityTimer();
         const data: SSERunComplete = JSON.parse(e.data);
         isTerminalRef.current = true;
         setState((s) => ({
           ...s,
           isConnected: false,
           isComplete: true,
+          isStale: false,
           totalTokens: data.totalTokens,
           totalDurationMs: data.totalDurationMs,
         }));
@@ -143,12 +175,14 @@ export function useAgentRunStream() {
       });
 
       es.addEventListener("run_error", (e) => {
+        clearInactivityTimer();
         const data: SSERunError = JSON.parse(e.data);
         isTerminalRef.current = true;
         setState((s) => ({
           ...s,
           isConnected: false,
           isComplete: true,
+          isStale: false,
           error: data.error,
         }));
         es.close();
@@ -156,6 +190,7 @@ export function useAgentRunStream() {
       });
 
       es.onerror = () => {
+        clearInactivityTimer();
         es.close();
         eventSourceRef.current = null;
         setState((s) => ({ ...s, isConnected: false }));
@@ -177,7 +212,7 @@ export function useAgentRunStream() {
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [closeEventSource],
+    [closeEventSource, resetInactivityTimer, clearInactivityTimer],
   );
 
   const reconnect = useCallback(
@@ -190,6 +225,7 @@ export function useAgentRunStream() {
           setState({
             isConnected: false,
             isComplete: true,
+            isStale: false,
             error: run.errorMessage ?? null,
             steps: run.steps.map((s) => ({
               id: s.id,
@@ -206,7 +242,6 @@ export function useAgentRunStream() {
           return;
         }
 
-        // Run still active — hydrate completed steps, then reopen SSE
         setState((prev) => {
           const existingIds = new Set(prev.steps.map((s) => s.id));
           const newSteps = run.steps
@@ -222,6 +257,7 @@ export function useAgentRunStream() {
             }));
           return {
             ...prev,
+            isStale: false,
             steps: [
               ...prev.steps.filter((s) => s.status === "COMPLETED"),
               ...newSteps,
@@ -252,7 +288,6 @@ export function useAgentRunStream() {
     (runId: string) => {
       disconnect();
 
-      // Reset refs for new run
       isTerminalRef.current = false;
       isUserDisconnectRef.current = false;
       retryCountRef.current = 0;
@@ -268,8 +303,9 @@ export function useAgentRunStream() {
     return () => {
       closeEventSource();
       clearRetryTimer();
+      clearInactivityTimer();
     };
-  }, [closeEventSource, clearRetryTimer]);
+  }, [closeEventSource, clearRetryTimer, clearInactivityTimer]);
 
   return { ...state, connect, disconnect };
 }

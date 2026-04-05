@@ -22,7 +22,7 @@ export const PLANS: PlanInfo[] = [
     description: 'Get started with basic AI agent capabilities',
     features: [
       { text: '10 runs per month' },
-      { text: 'Mistral 7B model only' },
+      { text: 'Gemini Flash, GPT-4o Mini, Mistral' },
       { text: '1 agent team' },
       { text: 'Basic memory' },
     ],

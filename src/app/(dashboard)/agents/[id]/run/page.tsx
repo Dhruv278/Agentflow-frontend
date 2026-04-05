@@ -139,6 +139,7 @@ export default function AgentRunPage() {
           error={stream.error}
           totalTokens={stream.totalTokens}
           totalDurationMs={stream.totalDurationMs}
+          isStale={stream.isStale}
         />
       )}
 
